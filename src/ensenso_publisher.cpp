@@ -6,6 +6,9 @@
 #include "sensor_msgs/PointCloud2.h"
 #include <sstream>
 #include <pcl_ros/point_cloud.h>
+#include <godel_msgs/EnsensoManager.h>
+
+const static std::string ENSENSO_SRV_NAME = "ensenso_manager";
 
 ros::Publisher chatter_pub; 
 ros::Publisher chatter_pub2;
@@ -48,25 +51,57 @@ void grabberCallback(const PointCloudXYZ::Ptr& cloud)
     chatter_pub.publish(cloud);
 }
 
+void stopEnsenso()
+{
+  ensenso_ptr->stop();
+}
+
+
+void startEnsenso()
+{
+  ensenso_ptr->start();
+}
+
+bool managerCallback(godel_msgs::EnsensoManagerRequest& req, godel_msgs::EnsensoManagerResponse& res)
+{
+  switch(req.action)
+  {
+
+  case godel_msgs::EnsensoManagerRequest::START:
+    startEnsenso();
+    break;
+
+  case godel_msgs::EnsensoManagerRequest::STOP:
+    stopEnsenso();
+    break;
+
+  }
+
+  res.result = ensenso_ptr->isRunning();
+  return true;
+}
+
+
 int main (int argc, char** argv)
 {
     ros::init(argc, argv, "ensenso_publisher");
-    ros::NodeHandle n;
+    ros::NodeHandle nh;
+    ros::ServiceServer manager = nh.advertiseService(ENSENSO_SRV_NAME, &managerCallback);
 
-    n.param("camera_frame_id", camera_frame_id, std::string("camera_optical_frame"));
+    nh.param("camera_frame_id", camera_frame_id, std::string("camera_optical_frame"));
 
-    if (n.getParam("/ensenso_publisher_node/FlexView", FlexView))
+    if (nh.getParam("/ensenso_publisher_node/FlexView", FlexView))
     {
         std::cout << "Flex View: " << FlexView << std::endl;
     }
     
-    if (n.getParam("/ensenso_publisher_node/FlexViewImages", FlexViewImages))
+    if (nh.getParam("/ensenso_publisher_node/FlexViewImages", FlexViewImages))
     {
         std::cout << "Flex View Images: " << FlexViewImages << std::endl;
     }
 
-    chatter_pub = n.advertise<sensor_msgs::PointCloud2>("/depth/points", 100);
-    chatter_pub2 = n.advertise<sensor_msgs::PointCloud2>("/depth/ds_points", 100);
+    chatter_pub = nh.advertise<sensor_msgs::PointCloud2>("/depth/points", 100);
+    chatter_pub2 = nh.advertise<sensor_msgs::PointCloud2>("/depth/ds_points", 100);
 
     ros::Rate loop_rate(10);
 
