@@ -6,7 +6,7 @@
 #include "sensor_msgs/PointCloud2.h"
 #include <sstream>
 #include <pcl_ros/point_cloud.h>
-#include <godel_msgs/EnsensoManager.h>
+#include <godel_msgs/EnsensoCommand.h>
 
 const static std::string ENSENSO_SRV_NAME = "ensenso_manager";
 
@@ -62,16 +62,16 @@ void startEnsenso()
   ensenso_ptr->start();
 }
 
-bool managerCallback(godel_msgs::EnsensoManagerRequest& req, godel_msgs::EnsensoManagerResponse& res)
+bool managerCallback(godel_msgs::EnsensoCommandRequest& req, godel_msgs::EnsensoCommandResponse& res)
 {
   switch(req.action)
   {
 
-  case godel_msgs::EnsensoManagerRequest::START:
+  case godel_msgs::EnsensoCommandRequest::START:
     startEnsenso();
     break;
 
-  case godel_msgs::EnsensoManagerRequest::STOP:
+  case godel_msgs::EnsensoCommandRequest::STOP:
     stopEnsenso();
     break;
 
