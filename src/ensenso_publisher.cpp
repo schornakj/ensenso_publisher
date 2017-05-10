@@ -162,24 +162,26 @@ int main (int argc, char** argv)
       std::cout << "Grabbing cloud\n";
       ensenso_ptr->grabSingleCloud(*cloud_ptr);
 
-//      std::cout << "to image\n";
-//      cv::Mat depth_img = toImage(*cloud_ptr);
+      std::cout << "to image\n";
+      cv::Mat depth_img = toImage(*cloud_ptr);
 
 //      std::cout << "cv bridge\n";
-//      sensor_msgs::ImagePtr msg = cv_bridge::CvImage(std_msgs::Header(), "mono16", depth_img).toImageMsg();
-//      msg->header.frame_id = "left_camera";
-
-
-      auto rect_data = getRectifiedImages();
-      auto rect_img = toGrayImg(rect_data, 1280, 1024);
-
-      sensor_msgs::ImagePtr msg = cv_bridge::CvImage(std_msgs::Header(), "mono8", rect_img).toImageMsg();
+      sensor_msgs::ImagePtr msg = cv_bridge::CvImage(std_msgs::Header(), "mono16", depth_img).toImageMsg();
       msg->header.frame_id = "left_camera";
-
-      std::cout << "Pub img\n";
+      msg->header.stamp = ros::Time::now();
       depth_image_pub.publish(msg);
 
-      applyColor(*cloud_ptr, rect_data, *color_cloud_ptr);
+
+//      auto rect_data = getRectifiedImages();
+//      auto rect_img = toGrayImg(rect_data, 1280, 1024);
+
+//      sensor_msgs::ImagePtr msg = cv_bridge::CvImage(std_msgs::Header(), "mono8", rect_img).toImageMsg();
+//      msg->header.frame_id = "left_camera";
+
+//      std::cout << "Pub img\n";
+//      depth_image_pub.publish(msg);
+
+//      applyColor(*cloud_ptr, rect_data, *color_cloud_ptr);
 
       std::cout << "Pub cloud\n";
       point_cloud_pub.publish(color_cloud_ptr);
