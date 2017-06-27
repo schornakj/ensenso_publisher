@@ -37,6 +37,42 @@ cv::Mat toImage(const PointCloudXYZ& cloud)
   return mat;
 }
 
+sensor_msgs::CameraInfo getLeftCameraInfo()
+{
+  sensor_msgs::CameraInfo cam_info;
+  const std::string cam = "Left";
+
+  auto& camera_ = ensenso_ptr->camera_;
+
+  cam_info.width = camera_[itmSensor][itmSize][0].asInt();
+  cam_info.height = camera_[itmSensor][itmSize][1].asInt();
+  cam_info.distortion_model = "plumb_bob";
+  // Distorsion factors
+  cam_info.D.resize(5);
+  for(std::size_t i = 0; i < cam_info.D.size(); ++i)
+   cam_info.D[i] = camera_[itmCalibration][itmMonocular][cam][itmDistortion][i].asDouble();
+  // K and R matrices
+  for(std::size_t i = 0; i < 3; ++i)
+  {
+     for(std::size_t j = 0; j < 3; ++j)
+     {
+       cam_info.K[3*i+j] = camera_[itmCalibration][itmMonocular][cam][itmCamera][j][i].asDouble();
+       cam_info.R[3*i+j] = camera_[itmCalibration][itmDynamic][itmStereo][cam][itmRotation][j][i].asDouble();
+     }
+  }
+  cam_info.P[0] = camera_[itmCalibration][itmDynamic][itmStereo][cam][itmCamera][0][0].asDouble();
+  cam_info.P[1] = camera_[itmCalibration][itmDynamic][itmStereo][cam][itmCamera][1][0].asDouble();
+  cam_info.P[2] = camera_[itmCalibration][itmDynamic][itmStereo][cam][itmCamera][2][0].asDouble();
+  cam_info.P[3] = 0.0;
+  cam_info.P[4] = camera_[itmCalibration][itmDynamic][itmStereo][cam][itmCamera][0][1].asDouble();
+  cam_info.P[5] = camera_[itmCalibration][itmDynamic][itmStereo][cam][itmCamera][1][1].asDouble();
+  cam_info.P[6] = camera_[itmCalibration][itmDynamic][itmStereo][cam][itmCamera][2][1].asDouble();
+  cam_info.P[7] = 0.0;
+  cam_info.P[10] = 1.0;
+
+  return cam_info;
+}
+
 std::vector<unsigned char> getRectifiedImages()
 {
   int width, height, channels, bytes_per_channel;
@@ -124,9 +160,9 @@ int main (int argc, char** argv)
 
     // Publisher for depth image
     image_transport::ImageTransport it (nh);
-    image_transport::Publisher depth_image_pub = it.advertise("depth/image", 0);
+    image_transport::CameraPublisher depth_image_pub = it.advertiseCamera("depth/image", 0);
 
-    ros::Rate loop_rate(1);
+    ros::Rate loop_rate(4);
 
     ensenso_ptr.reset(new pcl::EnsensoGrabber);
     ensenso_ptr->openTcpPort();
@@ -156,6 +192,8 @@ int main (int argc, char** argv)
 
 //    ensenso_ptr->start();
 
+    auto cam_info = boost::make_shared<sensor_msgs::CameraInfo>(getLeftCameraInfo());
+    cam_info->header.frame_id = "left_camera";
 
     while (ros::ok())
     {
@@ -169,7 +207,8 @@ int main (int argc, char** argv)
       sensor_msgs::ImagePtr msg = cv_bridge::CvImage(std_msgs::Header(), "mono16", depth_img).toImageMsg();
       msg->header.frame_id = "left_camera";
       msg->header.stamp = ros::Time::now();
-      depth_image_pub.publish(msg);
+      cam_info->header.stamp = msg->header.stamp;
+      depth_image_pub.publish(msg, cam_info);
 
 
 //      auto rect_data = getRectifiedImages();
